@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
     <title>NammAI - Nimma All-Rounder AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -21,6 +21,27 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #71717a; /* zinc-500 */
+      }
+
+      html, body, #root {
+        height: 100%;
+        min-height: 100%;
+        width: 100vw;
+        overflow-x: hidden;
+        touch-action: manipulation;
+      }
+      body {
+        overscroll-behavior-y: none;
+      }
+      /* Responsive font and padding for mobile */
+      @media (max-width: 640px) {
+        body {
+          font-size: 15px;
+          padding: 0 !important;
+        }
+        #root {
+          padding: 0 !important;
+        }
       }
     </style>
   <script type="importmap">

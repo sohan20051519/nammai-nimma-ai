@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState<boolean>(false);
   const [language, setLanguage] = useState<Language>('kannada');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   
   // Resizing state
   const [isResizing, setIsResizing] = useState(false);
@@ -302,45 +302,103 @@ const App: React.FC = () => {
         };
     }, [isResizing, handleMouseMove, handleMouseUp]);
 
+  // Responsive: auto-close sidebar on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+      else setIsSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-900 font-sans">
       <Header language={language} onLanguageChange={handleLanguageChange} />
-      <div className="flex flex-1 overflow-hidden">
+      {/* Mobile sidebar toggle button */}
+      <div className="lg:hidden flex items-center px-2 py-1 bg-zinc-950 border-b border-zinc-800">
+        <button
+          className="text-zinc-200 px-3 py-2 rounded hover:bg-zinc-800"
+          onClick={() => setIsSidebarOpen(v => !v)}
+        >
+          {isSidebarOpen ? t('closeSidebar') || 'Close Menu' : t('openSidebar') || 'Menu'}
+        </button>
+      </div>
+      <div className="flex flex-1 overflow-hidden flex-col lg:flex-row">
+        {/* Sidebar: overlay on mobile, static on desktop */}
         <Sidebar 
-            chatHistory={chatHistory}
-            activeChatId={activeChatId}
-            onNewChat={handleNewChat}
-            onSelectChat={handleSelectChat}
-            t={t}
-            isOpen={isSidebarOpen}
-            onToggle={() => setIsSidebarOpen(prev => !prev)}
+          chatHistory={chatHistory}
+          activeChatId={activeChatId}
+          onNewChat={handleNewChat}
+          onSelectChat={handleSelectChat}
+          t={t}
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen(prev => !prev)}
+          className={`
+            fixed z-40 inset-y-0 left-0 w-64 bg-zinc-950 transition-transform duration-200
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            lg:static lg:translate-x-0 lg:w-64
+          `}
         />
-        <div ref={mainContentRef} className="flex flex-1 overflow-hidden">
-            <main className="flex flex-col bg-zinc-950 min-w-0" style={{width: `${panelsWidth.chat}%`}}>
-               {error ? (
-                <div className="flex-1 flex items-center justify-center text-center text-zinc-500 p-4">
-                  <p><strong className="font-bold text-zinc-200">{t('errorLabel')}:</strong> {error}</p>
-                </div>
-              ) : (
-                <ChatWindow 
-                    messages={messages} 
-                    onSendMessage={handleSendMessage} 
-                    isAiTyping={isAiTyping}
-                    generationMode={generationMode}
-                    setGenerationMode={setGenerationMode}
-                    onShowToast={showToastNotification}
-                    t={t}
-                />
-              )}
-            </main>
-            <div 
-              className="w-1.5 cursor-col-resize bg-zinc-800 hover:bg-zinc-700 transition-colors"
-              onMouseDown={handleMouseDown}
-            />
-            <div className="hidden lg:flex flex-col" style={{width: `${panelsWidth.preview}%`}}>
-              <PreviewWindow htmlContent={previewHtml} onPublish={handlePublish} t={t} />
-            </div>
+        {/* Overlay for sidebar on mobile */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-40 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+        <div
+          ref={mainContentRef}
+          className={`
+            flex-1 flex flex-col lg:flex-row overflow-hidden
+            transition-all duration-200
+          `}
+        >
+          {/* Main chat window */}
+          <main
+            className={`
+              flex flex-col bg-zinc-950 min-w-0
+              w-full
+              ${window.innerWidth >= 1024 ? '' : 'flex-1'}
+            `}
+            style={window.innerWidth >= 1024 ? { width: `${panelsWidth.chat}%` } : {}}
+          >
+            {error ? (
+              <div className="flex-1 flex items-center justify-center text-center text-zinc-500 p-4">
+                <p><strong className="font-bold text-zinc-200">{t('errorLabel')}:</strong> {error}</p>
+              </div>
+            ) : (
+              <ChatWindow 
+                messages={messages} 
+                onSendMessage={handleSendMessage} 
+                isAiTyping={isAiTyping}
+                generationMode={generationMode}
+                setGenerationMode={setGenerationMode}
+                onShowToast={showToastNotification}
+                t={t}
+              />
+            )}
+          </main>
+          {/* Draggable divider and preview only on large screens */}
+          <div
+            className="hidden lg:block w-1.5 cursor-col-resize bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            onMouseDown={handleMouseDown}
+          />
+          <div
+            className="hidden lg:flex flex-col"
+            style={{ width: `${panelsWidth.preview}%` }}
+          >
+            <PreviewWindow htmlContent={previewHtml} onPublish={handlePublish} t={t} />
+          </div>
+          {/* On mobile, show preview below chat */}
+          <div className="lg:hidden flex flex-col w-full">
+            {previewHtml && (
+              <div className="border-t border-zinc-800">
+                <PreviewWindow htmlContent={previewHtml} onPublish={handlePublish} t={t} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <Toast
